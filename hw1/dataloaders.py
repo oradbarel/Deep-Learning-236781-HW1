@@ -20,12 +20,17 @@ class FirstLastSampler(Sampler):
         self.data_source = data_source
 
     def __iter__(self) -> Iterator[int]:
-        # TODO:
         # Implement the logic required for this sampler.
         # If the length of the data source is N, you should return indices in a
         # first-last ordering, i.e. [0, N-1, 1, N-2, ...].
         # ====== YOUR CODE: ======
-        raise NotImplementedError()
+        for i in range(len(self.data_source)):
+            if i > len(self.data_source) - 1 - i:
+                break
+            yield i
+            if i == len(self.data_source) - 1 - i:
+                break
+            yield len(self.data_source) - 1 - i
         # ========================
 
     def __len__(self):
@@ -45,10 +50,9 @@ def create_train_validation_loaders(
     :param num_workers: Number of workers to pass to dataloader init.
     :return: A tuple of train and validation DataLoader instances.
     """
+
     if not (0.0 < validation_ratio < 1.0):
         raise ValueError(validation_ratio)
-
-    # TODO:
     #  Create two DataLoader instances, dl_train and dl_valid.
     #  They should together represent a train/validation split of the given
     #  dataset. Make sure that:
@@ -58,7 +62,19 @@ def create_train_validation_loaders(
     #  Hint: you can specify a Sampler class for the `DataLoader` instance
     #  you create.
     # ====== YOUR CODE: ======
-    raise NotImplementedError()
-    # ========================
-
+    val_size = int(validation_ratio * len(dataset))
+    indices = torch.randperm(len(dataset))
+    train_sampler = torch.utils.data.SubsetRandomSampler(indices[val_size :])
+    valid_sampler = torch.utils.data.SubsetRandomSampler(indices[:val_size])
+    dl_train = torch.utils.data.DataLoader(
+        dataset=dataset,
+        sampler= train_sampler,
+        batch_size=batch_size,
+        num_workers=2)
+    dl_valid =  torch.utils.data.DataLoader(
+        dataset=dataset,
+        sampler= valid_sampler,
+        batch_size=batch_size,
+        num_workers=2)
     return dl_train, dl_valid
+    # ========================

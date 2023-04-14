@@ -9,7 +9,12 @@ math (delimited with $$).
 # Part 1 answers
 
 part1_q1 = r"""
-**Your answer:**
+**Your answer:
+1. ?????
+2. false. ????
+3. true. ?????
+4. ?????
+**
 
 
 Write your answer using **markdown** and $\LaTeX$:
