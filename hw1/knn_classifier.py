@@ -24,7 +24,6 @@ class KNNClassifier(object):
         :return: self
         """
 
-        # TODO:
         #  Convert the input dataloader into x_train, y_train and n_classes.
         #  1. You should join all the samples returned from the dataloader into
         #     the (N,D) matrix x_train and all the labels into the (N,) vector

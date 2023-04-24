@@ -7,6 +7,7 @@ from sklearn.utils import check_array
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import PolynomialFeatures
 from sklearn.utils.validation import check_X_y, check_is_fitted
+from sklearn.model_selection import ParameterGrid, cross_validate
 
 
 class LinearRegressor(BaseEstimator, RegressorMixin):
@@ -27,14 +28,7 @@ class LinearRegressor(BaseEstimator, RegressorMixin):
         """
         X = check_array(X)
         check_is_fitted(self, "weights_")
-
-        # TODO: Calculate the model prediction, y_pred
-
-        y_pred = None
-        # ====== YOUR CODE: ======
-        raise NotImplementedError()
-        # ========================
-
+        y_pred = np.matmul(X, self.weights_)
         return y_pred
 
     def fit(self, X, y):
@@ -44,16 +38,9 @@ class LinearRegressor(BaseEstimator, RegressorMixin):
         :param y: A tensor of shape (N,) where N is the batch size.
         """
         X, y = check_X_y(X, y)
-
-        # TODO:
-        #  Calculate the optimal weights using the closed-form solution you derived.
-        #  Use only numpy functions. Don't forget regularization!
-
-        w_opt = None
-        # ====== YOUR CODE: ======
-        raise NotImplementedError()
-        # ========================
-
+        lamda = np.identity(X.shape[1], dtype=X.dtype)
+        lamda[0][0] = 0
+        w_opt = np.matmul(np.linalg.inv(((np.matmul(np.transpose(X),X) / X.shape[0]) + (self.reg_lambda * lamda))), (np.matmul(np.transpose(X), y) / X.shape[0]))
         self.weights_ = w_opt
         return self
 
@@ -75,10 +62,8 @@ def fit_predict_dataframe(
         features are used.
     :return: A vector of predictions, y_pred.
     """
-    # TODO: Implement according to the docstring description.
-    # ====== YOUR CODE: ======
-    raise NotImplementedError()
-    # ========================
+    features_df = df[feature_names] if feature_names else df.drop(target_name, axis=1)
+    y_pred = model.fit_predict(features_df.to_numpy(), df[target_name].to_numpy())
     return y_pred
 
 
@@ -93,16 +78,8 @@ class BiasTrickTransformer(BaseEstimator, TransformerMixin):
         :returns: A tensor xb of shape (N,D+1) where xb[:, 0] == 1
         """
         X = check_array(X, ensure_2d=True)
-
-        # TODO:
-        #  Add bias term to X as the first feature.
-        #  See np.hstack().
-
-        xb = None
-        # ====== YOUR CODE: ======
-        raise NotImplementedError()
-        # ========================
-
+        bias_term = np.ones((X.shape[0],1))
+        xb = np.hstack((bias_term,X))
         return xb
 
 
@@ -114,12 +91,6 @@ class BostonFeaturesTransformer(BaseEstimator, TransformerMixin):
     def __init__(self, degree=2):
         self.degree = degree
 
-        # TODO: Your custom initialization, if needed
-        # Add any hyperparameters you need and save them as above
-        # ====== YOUR CODE: ======
-        raise NotImplementedError()
-        # ========================
-
     def fit(self, X, y=None):
         return self
 
@@ -130,18 +101,8 @@ class BostonFeaturesTransformer(BaseEstimator, TransformerMixin):
         :returns: Matrix of shape (n_samples, n_output_features_).
         """
         X = check_array(X)
-
-        # TODO:
-        #  Transform the features of X into new features in X_transformed
-        #  Note: You CAN count on the order of features in the Boston dataset
-        #  (this class is "Boston-specific"). For example X[:,1] is the second
-        #  feature ('ZN').
-
-        X_transformed = None
-        # ====== YOUR CODE: ======
-        raise NotImplementedError()
-        # ========================
-
+        polynomial = PolynomialFeatures(2)
+        X_transformed = polynomial.fit_transform(np.delete(X, [1,3], 1))
         return X_transformed
 
 
@@ -159,13 +120,13 @@ def top_correlated_features(df: DataFrame, target_feature, n=5):
         Both the returned sequences should be sorted so that the best (most
         correlated) feature is first.
     """
-
-    # TODO: Calculate correlations with target and sort features by it
-
-    # ====== YOUR CODE: ======
-    raise NotImplementedError()
-    # ========================
-
+    correlations =  {}
+    for column in df.columns:
+        if column != target_feature:
+            correlation = df[column].corr(df[target_feature])
+            correlations[column] = (abs(correlation), correlation)
+    top_n_features = sorted(correlations, key=correlations.get, reverse=True)[:n]
+    top_n_corr = [correlations[i][1] for i in top_n_features]
     return top_n_features, top_n_corr
 
 
@@ -176,11 +137,7 @@ def mse_score(y: np.ndarray, y_pred: np.ndarray):
     :param y_pred: Ground truth labels, shape (N,)
     :return: MSE score.
     """
-
-    # TODO: Implement MSE using numpy.
-    # ====== YOUR CODE: ======
-    raise NotImplementedError()
-    # ========================
+    mse = np.mean(np.square(np.subtract(y, y_pred)))
     return mse
 
 
@@ -191,11 +148,9 @@ def r2_score(y: np.ndarray, y_pred: np.ndarray):
     :param y_pred: Ground truth labels, shape (N,)
     :return: R^2 score.
     """
-
-    # TODO: Implement R^2 using numpy.
-    # ====== YOUR CODE: ======
-    raise NotImplementedError()
-    # ========================
+    numerator = np.square(np.subtract(y,y_pred))
+    denominator = np.square(np.subtract(y, np.mean(y)))
+    r2 = 1 - (np.sum(numerator) / np.sum(denominator))
     return r2
 
 
@@ -213,21 +168,11 @@ def cv_best_hyperparams(
     :return: A dict containing the best model parameters,
         with some of the keys as returned by model.get_params()
     """
-
-    # TODO: Do K-fold cross validation to find the best hyperparameters
-    #  Notes:
-    #  - You can implement it yourself or use the built in sklearn utilities
-    #    (recommended). See the docs for the sklearn.model_selection package
-    #    http://scikit-learn.org/stable/modules/classes.html#module-sklearn.model_selection
-    #  - If your model has more hyperparameters (not just lambda and degree)
-    #    you should add them to the search.
-    #  - Use get_params() on your model to see what hyperparameters is has
-    #    and their names. The parameters dict you return should use the same
-    #    names as keys.
-    #  - You can use MSE or R^2 as a score.
-
-    # ====== YOUR CODE: ======
-    raise NotImplementedError()
-    # ========================
-
+    parameter_grid = list(ParameterGrid({'bostonfeaturestransformer__degree': list(degree_range), 'linearregressor__reg_lambda': list(lambda_range)}))
+    scores = []
+    for parameters in parameter_grid:
+        model.set_params(**parameters)
+        current_score = cross_validate(model, X=X, y=y, cv=k_folds)
+        scores.append(np.mean(current_score["test_score"]))
+    best_params = parameter_grid[np.argmax(scores)]
     return best_params
